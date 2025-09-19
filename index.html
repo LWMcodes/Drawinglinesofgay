@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drawing Ball</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+            font-family: 'Inter', sans-serif;
+            overflow: hidden; /* Prevent scrollbars */
+        }
+        canvas {
+            background-color: #ffffff;
+            border: 2px solid #333;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            display: block; /* Remove extra space below canvas */
+            touch-action: none; /* Prevent browser default touch actions */
+        }
+    </style>
+</head>
+<body class="bg-gray-100 p-4">
+    <div class="flex flex-col items-center p-4 bg-white rounded-xl shadow-lg">
+        <h1 class="text-2xl font-bold text-gray-800 mb-4">Drawing Balls</h1>
+        <canvas id="drawingCanvas"></canvas>
+        <div class="mt-4 flex space-x-4">
+            <button id="clearButton" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105">
+                Clear Drawing
+            </button>
+            <button id="resetButton" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105">
+                Reset Balls
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Get the canvas element and its 2D rendering context
+        const canvas = document.getElementById('drawingCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Set initial canvas dimensions
+        let canvasWidth = window.innerWidth * 0.8;
+        let canvasHeight = window.innerHeight * 0.7;
+        canvas.width = canvasWidth;
+        canvas.height = canvasHeight;
+
+        // --- Ball Properties ---
+        let ballRadius = 10;
+
+        // Ball 1
+        let ball1X, ball1Y; // Ball 1 position
+        let dx1, dy1;     // Ball 1 velocity
+        let path1 = [];  // Array to store Ball 1's path points
+
+        // Ball 2
+        let ball2X, ball2Y; // Ball 2 position
+        let dx2, dy2;     // Ball 2 velocity
+        let path2 = [];  // Array to store Ball 2's path points
+
+        // Ball 3 (New)
+        let ball3X, ball3Y; // Ball 3 position
+        let dx3, dy3;     // Ball 3 velocity
+        let path3 = [];  // Array to store Ball 3's path points
+    
+
+
+         // --- Adjustable Parameters ---
+        const speed = 3; // Base speed of the balls
+        const randomnessFactor = 0.5; // How much random deviation in direction for spontaneous turns
+        const edgeRepelStrength = 0.15; // How strongly balls are gently repelled when very close to the edges
+        const edgeBuffer = ballRadius * 3; // Distance from edge to start repelling
+        const trailOpacity = 0.0000002; // Opacity of the trails (lower value means more transparent, leading to darker overlaps)
+
+        // Function to initialize or reset ball 1's position and velocity
+        function initializeBall1() {
+            ball1X = canvas.width / 4; // Start at a different position
+            ball1Y = canvas.height / 2;
+            let angle = Math.random() * Math.PI * 2; // Random angle between 0 and 2*PI
+            dx1 = speed * Math.cos(angle);
+            dy1 = speed * Math.sin(angle);
+            path1 = [{ x: ball1X, y: ball1Y }]; // Start path at current ball position
+        }
+
+        // Function to initialize or reset ball 2's position and velocity
+        function initializeBall2() {
+            ball2X = (canvas.width / 4) * 2; // Start at a different position
+            ball2Y = canvas.height / 2;
+            let angle = Math.random() * Math.PI * 2; // Random angle between 0 and 2*PI
+            dx2 = speed * Math.cos(angle);
+            dy2 = speed * Math.sin(angle);
+            path2 = [{ x: ball2X, y: ball2Y }]; // Start path at current ball position
+        }
+
+        // Function to initialize or reset ball 3's position and velocity
+        function initializeBall3() {
+            ball3X = (canvas.width / 4) * 3; // Start at a different position
+            ball3Y = canvas.height / 2;
+            let angle = Math.random() * Math.PI * 2; // Random angle between 0 and 2*PI
+            dx3 = speed * Math.cos(angle);
+            dy3 = speed * Math.sin(angle);
+            path3 = [{ x: ball3X, y: ball3Y }]; // Start path at current ball position
+        }
+
+        // Function to initialize all balls
+        function initializeAllBalls() {
+            initializeBall1();
+            initializeBall2();
+            initializeBall3(); // Initialize the new ball
+        }
+
+        // Initialize all balls when the script loads
+        initializeAllBalls();
+
+        // Function to draw a generic ball
+        function drawBall(x, y, radius, color) {
+            ctx.beginPath();
+            ctx.arc(x, y, radius, 0, Math.PI * 2);
+            ctx.fillStyle = color;
+            ctx.fill();
+            ctx.closePath();
+        }
+
+        // Function to draw a generic path/line
+        function drawPath(pathArray, strokeColor, lineWidth) {
+            if (pathArray.length < 2) return; // Need at least two points to draw a line
+
+            ctx.beginPath();
+            ctx.moveTo(pathArray[0].x, pathArray[0].y); // Start at the first point
+
+            // Draw lines between all subsequent points
+            for (let i = 1; i < pathArray.length; i++) {
+                ctx.lineTo(pathArray[i].x, pathArray[i].y);
+            }
+
+            ctx.strokeStyle = strokeColor;
+            ctx.lineWidth = lineWidth;
+            ctx.stroke();
+            ctx.closePath();
+        }
+
+        // Main drawing function
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the entire canvas on each frame
+
+            // Draw paths first
+            drawPath(path1, '#0047AB', 2); // Orange-red trail for ball 1 (Green Ball)
+            drawPath(path2, '#FF0000', 2); // Green trail for ball 2 (Red Ball)
+            drawPath(path3, '#000000', 2); // Blue-violet trail for ball 3 (Yellow Ball)
+
+            // Draw balls on top
+            drawBall(ball1X, ball1Y, ballRadius, '#922200'); // Green ball 1
+            drawBall(ball2X, ball2Y, ballRadius, '#00562B'); // Red ball 2
+            drawBall(ball3X, ball3Y, ballRadius, '#004F60'); // Yellow ball 3
+
+            // --- Update Ball 1 ---
+            dx1 += (Math.random() - 0.5) * randomnessFactor;
+            dy1 += (Math.random() - 0.5) * randomnessFactor;
+
+            if (ball1X < edgeBuffer) { dx1 += edgeRepelStrength; }
+            else if (ball1X > canvas.width - edgeBuffer) { dx1 -= edgeRepelStrength; }
+            if (ball1Y < edgeBuffer) { dy1 += edgeRepelStrength; }
+            else if (ball1Y > canvas.height - edgeBuffer) { dy1 -= edgeRepelStrength; }
+
+            let currentSpeed1 = Math.sqrt(dx1 * dx1 + dy1 * dy1);
+            if (currentSpeed1 > 0) {
+                dx1 = (dx1 / currentSpeed1) * speed;
+                dy1 = (dy1 / currentSpeed1) * speed;
+            }
+            ball1X += dx1;
+            ball1Y += dy1;
+            ball1X = Math.max(ballRadius, Math.min(ball1X, canvas.width - ballRadius));
+            ball1Y = Math.max(ballRadius, Math.min(ball1Y, canvas.height - ballRadius));
+            path1.push({ x: ball1X, y: ball1Y });
+
+            // --- Update Ball 2 ---
+            dx2 += (Math.random() - 0.5) * randomnessFactor;
+            dy2 += (Math.random() - 0.5) * randomnessFactor;
+
+            if (ball2X < edgeBuffer) { dx2 += edgeRepelStrength; }
+            else if (ball2X > canvas.width - edgeBuffer) { dx2 -= edgeRepelStrength; }
+            if (ball2Y < edgeBuffer) { dy2 += edgeRepelStrength; }
+            else if (ball2Y > canvas.height - edgeBuffer) { dy2 -= edgeRepelStrength; }
+
+            let currentSpeed2 = Math.sqrt(dx2 * dx2 + dy2 * dy2);
+            if (currentSpeed2 > 0) {
+                dx2 = (dx2 / currentSpeed2) * speed;
+                dy2 = (dy2 / currentSpeed2) * speed;
+            }
+            ball2X += dx2;
+            ball2Y += dy2;
+            ball2X = Math.max(ballRadius, Math.min(ball2X, canvas.width - ballRadius));
+            ball2Y = Math.max(ballRadius, Math.min(ball2Y, canvas.height - ballRadius));
+            path2.push({ x: ball2X, y: ball2Y });
+
+            // --- Update Ball 3 ---
+            dx3 += (Math.random() - 0.5) * randomnessFactor;
+            dy3 += (Math.random() - 0.5) * randomnessFactor;
+
+            if (ball3X < edgeBuffer) { dx3 += edgeRepelStrength; }
+            else if (ball3X > canvas.width - edgeBuffer) { dx3 -= edgeRepelStrength; }
+            if (ball3Y < edgeBuffer) { dy3 += edgeRepelStrength; }
+            else if (ball3Y > canvas.height - edgeBuffer) { dy3 -= edgeRepelStrength; }
+
+            let currentSpeed3 = Math.sqrt(dx3 * dx3 + dy3 * dy3);
+            if (currentSpeed3 > 0) {
+                dx3 = (dx3 / currentSpeed3) * speed;
+                dy3 = (dy3 / currentSpeed3) * speed;
+            }
+            ball3X += dx3;
+            ball3Y += dy3;
+            ball3X = Math.max(ballRadius, Math.min(ball3X, canvas.width - ballRadius));
+            ball3Y = Math.max(ballRadius, Math.min(ball3Y, canvas.height - ballRadius));
+            path3.push({ x: ball3X, y: ball3Y });
+            
+
+
+            // Request the next animation frame
+            requestAnimationFrame(draw);
+        }
+
+        // Event listener for window resize to make the canvas responsive
+        window.addEventListener('resize', () => {
+            canvasWidth = window.innerWidth * 0.8;
+            canvasHeight = window.innerHeight * 0.7;
+            canvas.width = canvasWidth;
+            canvas.height = canvasHeight;
+            // Re-initialize ball positions on resize
+            initializeAllBalls();
+        });
+
+        // Event listener for the clear button
+        document.getElementById('clearButton').addEventListener('click', () => {
+            path1 = [{ x: ball1X, y: ball1Y }]; // Keep current ball position as the start of new path
+            path2 = [{ x: ball2X, y: ball2Y }]; // Keep current ball position as the start of new path
+            path3 = [{ x: ball3X, y: ball3Y }]; // Keep current ball position as the start of new path
+            ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the entire canvas
+        });
+
+        // Event listener for the reset button
+        document.getElementById('resetButton').addEventListener('click', () => {
+            initializeAllBalls(); // Reset ball positions and clear paths
+            ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the entire canvas
+        });
+
+
+        // Start the animation loop when the window loads
+        window.onload = function() {
+            draw();
+        };
+
+    </script>
+</body>
+</html>
